@@ -24,7 +24,6 @@ const aiConfig = {
 
   // --- MongoDB ------
   // Local: mongodb://localhost:27017/scamdetector
-  // Atlas (cloud):mongodb+srv://scamshield:cyber236.A@scamshieldcluster.ucf0jyk.mongodb.net/?appName=ScamShieldCluster
   mongoUri: process.env.MONGO_URI || "mongodb://localhost:27017/scamdetector",
 
   // --- Server -------
