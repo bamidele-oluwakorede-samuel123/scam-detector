@@ -16,7 +16,6 @@
 //
 // Error handling: any step that throws will be caught by the
 // Express error handler middleware we set up in app.js.
-// ─────────────────────────────────────────────────────────────
 
 import { detectInputType, sanitizeInput } from "../utils/helpers.js";
 import detectPatterns from "../utils/patternDetector.js";
@@ -33,7 +32,7 @@ import Scan from "../models/Scan.js";
  */
 export const analyzeInput = async (req, res, next) => {
   try {
-    // ── Step 1: Validate & sanitize ─────────────────────────
+    // ---- Step 1: Validate & sanitize -----------
     const { input } = req.body;
 
     if (!input || typeof input !== "string") {
@@ -46,13 +45,13 @@ export const analyzeInput = async (req, res, next) => {
       return res.status(400).json({ error: "Input is too short to analyze." });
     }
 
-    // ── Step 2: Detect input type ────────────────────────────
+    // ---- Step 2: Detect input type ------
     const inputType = detectInputType(sanitized);
 
-    // ── Step 3: Pattern detection ────────────────────────────
+    // ---- Step 3: Pattern detection -------
     const { flags: patternFlags, score: patternScore } = detectPatterns(sanitized, inputType);
 
-    // ── Step 4: URL-specific analysis ────────────────────────
+    // --- Step 4: URL-specific analysis ------
     let urlAnalysisResult = null;
     let urlFlags = [];
     let urlScore = null;
@@ -63,12 +62,12 @@ export const analyzeInput = async (req, res, next) => {
       urlScore = urlAnalysisResult.score;
     }
 
-    // ── Step 5: AI analysis ───────────────────────────────────
+    // ---- Step 5: AI analysis ------
     // We pass pre-detected flags to Claude so it can build on them
     const allPreDetectedFlags = [...patternFlags, ...urlFlags];
     const aiResult = await analyzeWithAI(sanitized, inputType, allPreDetectedFlags);
 
-    // ── Step 6: Final score calculation ──────────────────────
+    // --- Step 6: Final score calculation ------
     const { finalScore, riskLevel } = calculateFinalScore({
       aiScore: aiResult.riskScore,
       patternScore,
@@ -76,13 +75,13 @@ export const analyzeInput = async (req, res, next) => {
       inputType,
     });
 
-    // ── Step 7: Consolidate all flags ─────────────────────────
+    // --- Step 7: Consolidate all flags ------
     const redFlags = consolidateFlags(patternFlags, urlFlags, aiResult.additionalFlags || []);
 
-    // ── Step 8: Build comparison ──────────────────────────────
+    // ---- Step 8: Build comparison ------
     const comparison = buildComparison(aiResult.comparison, inputType);
 
-    // ── Step 9: Save to MongoDB ───────────────────────────────
+    // ---- Step 9: Save to MongoDB -------
     const scan = await Scan.create({
       input: sanitized,
       inputType,
@@ -102,7 +101,7 @@ export const analyzeInput = async (req, res, next) => {
       patternFlags,
     });
 
-    // ── Step 10: Respond ──────────────────────────────────────
+    // --- Step 10: Respond -------
     res.status(200).json({
       success: true,
       scanId: scan._id,
