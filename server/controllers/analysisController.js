@@ -13,7 +13,6 @@
 // 8. Build comparison data
 // 9. Save to MongoDB
 // 10. Return JSON response to frontend
-//
 // Error handling: any step that throws will be caught by the
 // Express error handler middleware we set up in app.js.
 
