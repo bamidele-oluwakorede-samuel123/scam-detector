@@ -1,7 +1,5 @@
 // aiConfig.js
-// ─────────────────────────────────────────────────────────────
 // Central configuration for the scam detector backend.
-//
 // AI PROVIDER: OpenRouter (https://openrouter.ai)
 
 
@@ -34,7 +32,7 @@ const aiConfig = {
   riskThresholds: {
     safe: 30,       // 0–30   → Safe (green)
     suspicious: 60, // 31–60  → Suspicious (yellow)
-    dangerous: 100,               // 61–100 → Dangerous (red)
+    dangerous: 100, // 61–100 → Dangerous (red)
   },
 
   // --- Input Type Constants ------
