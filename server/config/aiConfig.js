@@ -15,7 +15,7 @@ const aiConfig = {
 
   // --- AI Model Selection ---
   // This is the model OpenRouter will use for analysis.
-  model: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.3-70b-instruct:free",
+  model: process.env.OPENROUTER_MODEL || "liquid/lfm-2.5-1.2b-instruct:free",
 
   // Max tokens the AI can return in one response.
   maxTokens: 1024,
