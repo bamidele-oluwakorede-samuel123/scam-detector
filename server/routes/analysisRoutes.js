@@ -6,14 +6,18 @@
 //   GET  /api/scan/:id      → Get a specific scan by ID
 // All routes are prefixed with /api in app.js.
 
+
 import express from "express";
-import { analyzeInput, getHistory, getScanById } from "../controllers/analysisController.js";
+import { analyzeInput, analyzeImage, getHistory, getScanById } from "../controllers/analysisController.js";
 
 const router = express.Router();
 
-// POST /api/analyze — main analysis endpoint
-// Body: { input: string }
+// POST /api/analyze — analyze text, URL, phone, or email
 router.post("/analyze", analyzeInput);
+
+// POST /api/analyze-image — analyze an uploaded screenshot or image
+// Body: { base64Image: string, mimeType: string }
+router.post("/analyze-image", analyzeImage);
 
 // GET /api/history — returns the 20 most recent scans
 router.get("/history", getHistory);

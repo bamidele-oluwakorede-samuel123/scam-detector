@@ -154,3 +154,113 @@ export const getScanById = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/analyze-image
+ * Analyzes an uploaded image/screenshot for scam indicators.
+ *
+ * HOW IMAGE UPLOAD WORKS:
+ * The frontend converts the image file to a Base64 string and sends
+ * it as JSON in the request body. We don't need multer or file storage
+ * because we send the image directly to the AI as a Base64 data URL —
+ * no file is ever saved to disk.
+ *
+ * Request body:
+ * {
+ *   base64Image: "<base64 encoded image string>",
+ *   mimeType: "image/jpeg" | "image/png" | "image/webp"
+ * }
+ */
+export const analyzeImage = async (req, res, next) => {
+  try {
+    const { base64Image, mimeType } = req.body;
+
+    // ── Validate input ────────────────────────────────────────
+    if (!base64Image) {
+      return res.status(400).json({ error: "No image data provided." });
+    }
+
+    // Validate mime type — only accept image formats
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowedTypes.includes(mimeType)) {
+      return res.status(400).json({
+        error: "Invalid file type. Please upload a JPEG, PNG, or WebP image.",
+      });
+    }
+
+    // Basic size check — base64 of a 5MB file is about 6.7MB as a string
+    // We cap at 10MB base64 string length to prevent abuse
+    if (base64Image.length > 10_000_000) {
+      return res.status(400).json({
+        error: "Image too large. Please upload an image under 5MB.",
+      });
+    }
+
+    // ── Run AI vision analysis ────────────────────────────────
+    // This calls the vision-capable model on OpenRouter.
+    // It reads the image, extracts text, and analyzes for scams.
+    const aiResult = await analyzeImageWithAI(base64Image, mimeType);
+
+    // ── Run pattern detection on extracted text ───────────────
+    // The AI extracts text from the image — we can then run our
+    // rule-based pattern detector on that extracted text too,
+    // giving us a second layer of analysis on top of the vision AI.
+    const extractedText = aiResult.extractedText || "";
+    const inputType = "text"; // Image content is treated as text after extraction
+
+    let patternFlags = [];
+    let patternScore = 0;
+
+    if (extractedText && extractedText.length > 5) {
+      const patternResult = detectPatterns(extractedText, inputType);
+      patternFlags = patternResult.flags;
+      patternScore = patternResult.score;
+    }
+
+    // ── Calculate final score ─────────────────────────────────
+    const { finalScore, riskLevel } = calculateFinalScore({
+      aiScore: aiResult.riskScore,
+      patternScore,
+      urlScore: null,
+      inputType,
+    });
+
+    // ── Consolidate flags ─────────────────────────────────────
+    const redFlags = consolidateFlags(patternFlags, [], aiResult.additionalFlags || []);
+
+    // ── Build comparison ──────────────────────────────────────
+    const comparison = buildComparison(aiResult.comparison, inputType);
+
+    // ── Save to MongoDB ───────────────────────────────────────
+    // We save the extracted text as the input so the history
+    // shows what was found in the image, not "[image]"
+    const scan = await Scan.create({
+      input: extractedText || "[Image scan — no text extracted]",
+      inputType: "text",
+      riskScore: finalScore,
+      riskLevel,
+      redFlags,
+      explanation: aiResult.explanation,
+      verdict: aiResult.verdict,
+      comparison,
+      patternFlags,
+    });
+
+    // ── Respond ───────────────────────────────────────────────
+    res.status(200).json({
+      success: true,
+      scanId: scan._id,
+      inputType: "image",
+      extractedText,
+      riskScore: finalScore,
+      riskLevel,
+      verdict: aiResult.verdict,
+      explanation: aiResult.explanation,
+      redFlags,
+      comparison,
+      createdAt: scan.createdAt,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
